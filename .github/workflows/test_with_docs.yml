@@ -50,7 +50,13 @@ jobs:
         mkdir -p docs-branch/docs
         cp coverage.xml test-results.xml docs-branch/docs/
     
-    - name: Commit and push test reports to docs branch
+    - name: Commit test reports
+      run: |
+        cd docs-branch
+        git add docs/coverage.xml docs/test-results.xml
+        git commit -m "Update test reports" || echo "No changes to commit"
+    
+    - name: Push test reports to docs branch
       uses: ad-m/github-push-action@v0.8.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
