@@ -28,11 +28,40 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        
+        pip install pytest pytest-cov pytest-json-report pandas
+    
     - name: Run tests with pytest
       continue-on-error: true
       run: |
-        pytest tests/ --cov=calculator --cov-report=xml:coverage.xml --junitxml=test-results.xml
+        pytest tests/ --cov=calculator --cov-report=annotate --json-report --json-report-file=test-results.json
+    
+    - name: Convert coverage to CSV
+      run: |
+        python -c "
+import coverage
+cov = coverage.Coverage()
+cov.load()
+data = cov.get_data()
+lines = []
+for file in data.measured_files():
+    for line in data.lines(file):
+        lines.append({'file': file, 'line': line, 'covered': line in data._lines[file]})
+import pandas as pd
+df = pd.DataFrame(lines)
+df.to_csv('coverage.csv', index=False)
+"
+    
+    - name: Convert test results to CSV
+      run: |
+        python -c "
+import json
+import pandas as pd
+with open('test-results.json') as f:
+    data = json.load(f)
+tests = [{'test': t['nodeid'], 'outcome': t['outcome'], 'duration': t['duration']} for t in data['tests']]
+df = pd.DataFrame(tests)
+df.to_csv('test-results.csv', index=False)
+"
     
     - name: Set up Git for pushing reports
       run: |
@@ -48,13 +77,13 @@ jobs:
     - name: Copy test reports to docs directory
       run: |
         mkdir -p docs-branch/docs
-        cp coverage.xml test-results.xml docs-branch/docs/
+        cp coverage.csv test-results.csv docs-branch/docs/
     
     - name: Commit test reports
       run: |
         cd docs-branch
-        git add docs/coverage.xml docs/test-results.xml
-        git commit -m "Update test reports" || echo "No changes to commit"
+        git add docs/coverage.csv docs/test-results.csv
+        git commit -m "Update test reports in CSV format" || echo "No changes to commit"
     
     - name: Push test reports to docs branch
       uses: ad-m/github-push-action@v0.8.0
