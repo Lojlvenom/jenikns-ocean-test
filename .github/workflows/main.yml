@@ -30,18 +30,20 @@ jobs:
       run: |
         pytest tests/ --cov=calculator --cov-report=xml:coverage.xml --junitxml=test-results.xml
         
-    - name: Upload test results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: test-results-${{ matrix.python-version }}
-        path: |
-          test-results.xml
-          coverage.xml
+    - name: Move artifacts to docs folder
+      run: |
+        mkdir -p docs
+        mv test-results.xml coverage.xml docs/
+        
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+    - name: Commit artifacts to docs branch
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action agent docs"
+        git checkout -B docs
+        git add docs/test-results.xml docs/coverage.xml
+        git commit -m "Update test artifacts in docs folder" || echo "No changes to commit"
+        git push origin docs --force
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
