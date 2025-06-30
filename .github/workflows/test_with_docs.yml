@@ -1,10 +1,13 @@
-name: Python CI
+name: Test and upload reports
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+
+permissions:
+  contents: write
 
 jobs:
   test:
@@ -48,10 +51,8 @@ jobs:
         cp coverage.xml test-results.xml docs-branch/docs/
     
     - name: Commit and push test reports to docs branch
-      run: |
-        cd docs-branch
-        git add docs/coverage.xml docs/test-results.xml
-        git commit -m "Update test reports from CI run"
-        git push origin docs
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: ad-m/github-push-action@v0.8.0
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: docs
+        directory: docs-branch
